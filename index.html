@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>S.A.N.T.A. Protocol</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --bg:#020612; --panel:#071018; --accent:#39ff14; --muted:#7bd07b;
+    --glass: rgba(255,255,255,0.02);
+    font-family: "Fira Mono", "Courier New", monospace;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#000 0%, #041022 100%);color:var(--accent);}
+  .wrap{max-width:1180px;margin:18px auto;padding:18px;border-radius:10px;}
+  header{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+  .logo{width:60px;height:60px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#001100;color:var(--accent);font-weight:900;font-size:20px}
+  h1{margin:0;font-size:1.25rem;letter-spacing:1px}
+  .subtitle{color:var(--muted);font-size:.9rem}
+  .container{display:flex;flex-wrap: wrap; gap:14px}
+  .left{flex:1;min-width:520px}
+  .right{width:380px; min-width: 380px;}
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:8px;border:1px solid rgba(57,255,20,0.04)}
+  .term-wrap{height:640px;display:flex;flex-direction:column}
+  .screen{flex:1;background:#000;border-radius:6px;padding:14px;overflow:auto;border:1px solid rgba(57,255,20,0.05);box-shadow:inset 0 0 140px rgba(0,0,0,0.6)}
+  .prompt-line{display:flex;gap:8px;align-items:flex-start}
+  .prompt{color:var(--muted);min-width:120px}
+  .input{flex:1;background:transparent;border:none;color:var(--accent);outline:none;font-family:inherit;font-size:14px}
+  .status{margin-top:8px;color:var(--muted);font-size:13px}
+  .kbd{padding:4px 8px;border-radius:6px;background:#031007;border:1px solid rgba(57,255,20,0.04);color:var(--accent);font-weight:700}
+  .muted{color:var(--muted)}
+  .file{color:#9cf7a8}
+  .cmd{color:#7efcff}
+  .success{color:#7cff66}
+  .danger{color:#ff6b6b}
+  .bold-text{font-weight: 800;}
+  .btn{background:transparent;border:1px solid rgba(57,255,20,0.06);color:var(--accent);padding:6px 8px;border-radius:6px;cursor:pointer}
+  .row{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .faux-term{background:linear-gradient(180deg,#071016,#021018);padding:10px;border-radius:6px;border:1px solid rgba(57,255,20,0.03)}
+  .hint{font-size:13px;color:var(--muted);margin-top:6px}
+  .big{font-size:1.05rem}
+  .center{text-align:center}
+  /* This is no longer used for the final win, but kept for layout */
+  .reveal{background:linear-gradient(90deg, rgba(57,255,20,0.03), rgba(57,255,20,0.01));border-radius:8px;padding:12px;margin-top:12px;border:1px solid rgba(57,255,20,0.06)}
+  footer{margin-top:12px;color:var(--muted);font-size:12px;text-align:center;width:100%;}
+  .blip{height:10px;width:10px;border-radius:50%;background:#39ff14;display:inline-block;margin-right:6px;box-shadow:0 0 6px rgba(57,255,20,0.3)}
+  .log-line{white-space:pre-wrap;font-family:inherit;margin:2px 0}
+  .small{font-size:12px;color:var(--muted)}
+  .admin-toggle{display:flex;gap:8px;align-items:center}
+  .panel-scroll{max-height:240px;overflow:auto;padding-right:6px}
+  .prog{height:12px;background:rgba(255,255,255,0.03);border-radius:8px;overflow:hidden;margin-top:8px}
+  .prog > div{height:100%;background:linear-gradient(90deg,#39ff14,#7cff66);width:0%;transition:width .4s ease}
+  .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.03);padding:6px;border-radius:6px;color:var(--muted)}
+  input[type="text"],input[type="password"],textarea{background:transparent;border:1px solid rgba(57,255,20,0.04);padding:8px;color:var(--accent);width:100%;box-sizing: border-box; border-radius:6px}
+  textarea{resize:vertical}
+  .hint-box{background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;margin-top:8px}
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">ELF</div>
+    <div>
+      <h1>Elf Agent Console</h1>
+      <div class="subtitle">Mission: Find Santa</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="left panel term-wrap">
+      <div class="screen" id="screen" aria-live="polite"></div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <div class="prompt muted">~&nbsp;/elf_agent</div>
+        <input id="cmdInput" class="input" autocomplete="off" autofocus placeholder="type 'help' or 'run tutorial'" />
+        <button id="enterBtn" class="btn">Run</button>
+      </div>
+      <div class="status" id="status">session: <span id="sess">LOCAL</span> · <span id="statusMsg" class="muted">awaiting input</span></div>
+      <div class="prog" title="progress"><div id="mainProg" style="width:0%"></div></div>
+    </div>
+
+    <div class="right panel">
+      
+      <div style="margin-top:12px">
+        <div class="muted small">Quick commands</div>
+        <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div class="kbd">help</div><div class="small muted">Show commands</div>
+          <div class="kbd">hint</div><div class="small muted">Get a hint</div>
+          <div class="kbd">run tutorial</div><div class="small muted">Run training</div>
+          <div class="kbd">ls /</div><div class="small muted">List files/dirs</div>
+          <div class="kbd">cat /file</div><div class="small muted">Show file</div>
+          <div class="kbd">grep 'X' /file</div><div class="small muted">Find text</div>
+          <div class="kbd">connect HOST PASS</div><div class="small muted">Connect to server</div>
+          <div class="kbd">remote ls</div><div class="small muted">List remote files</div>
+          <div class="kbd">hex -d /file</div><div class="small muted">Hex decode</div>
+          <div class="kbd">base64 -d /file</div><div class="small muted">Base64 decode</div>
+          <div class="kbd">xor -d KEY /file</div><div class="small muted">XOR decode</div>
+          <div class="kbd">submit-location ...</div><div class="small muted">FINISH MISSION</div>
+        </div>
+      </div>
+      
+      <div id="feedWrap" style="margin-top:12px">
+        <div class="faux-term">
+          <div class="row big"><span class="blip"></span><strong>System Feed</strong></div>
+          <div id="feed" class="small" style="margin-top:8px;max-height:240px;overflow:auto"></div>
+        </div>
+      </div>
+
+      <div id="revealBox" class="reveal center" style="display:none"></div>
+    </div>
+  </div>
+
+  <footer>Mission console v3.2. For Elf Eyes Only.</footer>
+</div>
+
+<script>
+// --- This wrapper fixes the "only GUI" problem ---
+document.addEventListener('DOMContentLoaded', () => {
+
+// --- Global State and Definitions ---
+const STORAGE_KEY = 'kh_protocol_v7_santa'; // New key for the new version
+const ADMIN_PASS_DEFAULT = 'AGENT42';
+
+let mission_step = 0; // Mission progress for hints
+
+const defaultState = {
+  adminPass: ADMIN_PASS_DEFAULT,
+  finalName: 'Alex', // The name to find
+  files: {
+    // Main entry point
+    '/README.txt': {type:'file', content:`Agent,
+We have a CODE RED. Santa is missing.
+Last seen: Workshop, 02:00.
+We detected an unauthorized network breach moments before.
+Start with the workshop's security logs.
+  -> Try: 'cat /logs/security.log'`},    
+    // *** NEW IMPROVED LOG FILE ***
+    '/logs/security.log': {type:'file', content:`[01:58] System nominal. All sensors green.
+[01:59] ALERT: Unauthorized breach. Workshop main door open.
+[02:00] SYSTEM: Lockdown protocol initiated. All other exits sealed.
+[02:01] ERROR: Main camera feed... OFFLINE.
+[02:01] ERROR: Secondary camera feed... OFFLINE.
+[02:02] AUDIO: ...sounds of a struggle... "You can't do this!"... "Get him to the van!"
+[02:03] SENSOR: Workshop pressure plate... DEACTIVATED. (Santa is no longer in the workshop).
+[02:04] SENSOR: Loading bay door... FORCED OPEN.
+[02:05] NETWORK: Unknown van departing.
+[02:06] NETWORK: Partial comms intercept from van: '...package is secure... connecting back to the IceNode... password is encrypted...'
+[02:07] SYSTEM: 'IceNode' identified as a known hostile network (kidnapper's server).
+[02:08] SYSTEM: 1 data packet intercepted during their escape.
+[02:09] SYSTEM: Packet saved to /logs/intercept.b64. You must decode this file.
+  -> Try: 'base64 -d /logs/intercept.b64'`},    
+    // Gives server IP and password
+    '/logs/intercept.b64': {type:'file', content:'U2VydmVyIElQOiAxMC4yMC4zMC40MCANCkhvc3RuYW1lOiBpY2Vub2RlLm5ldA0KUGFzc2tleTogRlJPWkVODQ=='}, // Base64 for: Server IP: 10.20.30.40 \nHostname: icenode.net\nPasskey: FROZEN
+
+    // A simple hint file
+    '/utils/encodings.txt': {type:'file', content:`Common Encodings:
+- Hex: 48656c6c6f
+- Base64: SGVsbG8=
+- ROT13: Uryyb (A<->N, B<->O, etc)`},
+    // --- "FLAVOR" FILES ---
+    '/logs/access.log': {type:'file', content:`[01:00] elf_agent_snowball: login
+[01:30] elf_admin_holly: login
+[01:59] UNKNOWN_IP_10.20.30.1: connection attempt
+[02:00] UNKNOWN_IP_10.20.30.1: breach detected`},
+    '/logs/reindeer_feed.log': {type:'file', content:`[01:00] Dasher: GPS OK.
+[01:00] Dancer: GPS OK.
+[01:00] Prancer: GPS OK.
+[01:00] Vixen: GPS OK.
+[01:00] Comet: GPS OK.
+[01:00] Cupid: GPS OK.
+[01:00] Donner: GPS OK.
+[01:00] Blitzen: GPS OK.
+[01:00] Rudolph: GPS OK. Nose calibrated.`},    
+    '/workshop/manifest.txt': {type:'file', content:`ASSIGNED: 4,500,000,000 Toys
+BUILT: 4,499,999,999 Toys
+STATUS: 1 toy pending (Red Bicycle)
+COAL: 2 tons (For naughty list)`},
+    '/agents/active_list.txt': {type:'file', content:`ACTIVE AGENTS:
+- Agent Snowball (Logistics)
+- Agent Peppermint (Toy Quality)
+- Agent Jingle (Reindeer Ops)
+- Agent Holly (Sys-Admin)`}  },
+  feed: []
+};
+
+let STATE = loadState();
+let history = [];
+let hindex = -1;
+let sessionHost = null;
+
+// --- Function Definitions ---
+function loadState(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw){ localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultState)); return JSON.parse(JSON.stringify(defaultState)); }
+    const data = JSON.parse(raw);
+    if (!data.files) {
+        console.warn("Old state detected, resetting to default.");
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultState)); 
+        return JSON.parse(JSON.stringify(defaultState));
+    }
+    return data;
+  } catch(e){ console.error(e); localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultState)); return JSON.parse(JSON.stringify(defaultState)); }
+}
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }
+
+function pushFeed(text, cls){
+  const feed = document.getElementById('feed');
+  if (!feed) return;
+  const d = document.createElement('div');
+  d.className = cls || '';
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+  feed.prepend(d);
+  if(feed.children.length > 80) feed.removeChild(feed.lastChild);
+}
+function printLine(text, cls){
+  const screen = document.getElementById('screen');
+  if (!screen) return;
+  const el = document.createElement('div');
+  el.className = 'log-line ' + (cls || '');
+  el.textContent = text;
+  screen.appendChild(el);
+  screen.scrollTop = screen.scrollHeight;
+}
+function printLines(lines, callback) {
+    let i = 0;
+    function nextLine() {
+        if (i < lines.length) {
+            if (lines[i].clear) clearScreen();
+            printLine(lines[i].text, lines[i].cls);
+            setTimeout(nextLine, lines[i].delay || 100);
+            i++;
+        } else if (callback) {
+            callback();
+        }
+    }
+    nextLine();
+}
+function clearScreen(){ 
+    document.getElementById('screen').innerHTML = ''; 
+    document.getElementById('revealBox').style.display='none'; 
+}
+function pathExists(p){ return STATE.files.hasOwnProperty(p); }
+function listDir(path){
+  if(path === '/' || path === undefined){
+    const items = new Set();
+    Object.keys(STATE.files).forEach(k => {
+      const parts = k.substring(1).split('/');
+      if(parts.length > 1) items.add(parts[0] + '/');
+      else if(parts[0]) items.add(parts[0]);
+    });
+    return Array.from(items).sort();
+  } else {
+    const norm = path.endsWith('/') ? path : path + '/';
+    return Object.keys(STATE.files)
+      .filter(k => k.startsWith(norm))
+      .map(k => k.substring(norm.length))
+      .filter(k => k && k.indexOf('/') === -1);
+  }
+}
+function getFile(p){ return STATE.files[p]; }
+function setStep(step) {
+    if (step > mission_step) {
+        mission_step = step;
+    }
+}
+
+function rot13(str){
+  return str.replace(/[a-zA-Z]/g, c=>{
+    const base = c <= 'Z' ? 65 : 97;
+    return String.fromCharCode(((c.charCodeAt(0)-base+13)%26)+base);
+  });
+}
+function hexToStr(hex){
+  try{
+    const clean = hex.replace(/\s+/g,'');
+    let out = '';
+    for(let i=0;i<clean.length;i+=2){
+      out += String.fromCharCode(parseInt(clean.substr(i,2),16));
+    }
+    return out;
+  }catch(e){ return null; }
+}
+function base64Decode(s){
+  try { return atob(s); } catch(e){ return null; }
+}
+function xorDecode(hexStr, keyStr){
+  try {
+    const bytes = hexStr.match(/.{1,2}/g);
+    if(!bytes) return null;
+    let out = '';
+    for(let i=0;i<bytes.length;i++){
+      const b = parseInt(bytes[i],16);
+      const k = keyStr.charCodeAt(i % keyStr.length);
+      out += String.fromCharCode(b ^ k);
+    }
+    return out;
+  } catch(e) { return null; }
+}
+
+const COMMANDS = {
+  help(args){
+    printLine('ELF AGENT CONSOLE HELP:');
+    printLine(' help                  - Show this message');
+    printLine(' hint                  - Get a hint for your current objective');
+    printLine(' run tutorial          - Run the interactive training');
+    printLine(' ls [path]             - List files (e.g., ls / or ls /logs)');
+    printLine(' cat [file]            - Show file content (e.g., cat /README.txt)');
+    printLine(' grep [term] [file]    - Search for text in a file');
+    printLine('--- Network ---');
+    printLine(' connect [host] [pass] - Connect to a remote host (e.g. connect icenode.net PASS)');
+    printLine(' remote [cmd]          - Run commands on remote server (e.g. remote ls)');
+    printLine('--- Decoders ---');
+    printLine(' rot13 /file');
+    printLine(' base64 -d /file');
+    printLine(' hex -d /file');
+    printLine(' xor -d [key] [file]   - (e.g. xor -d MYKEY /file.hex)');
+    printLine('--- Mission ---');
+    printLine(' submit-location [coords] - Report Santa\'s location to the Reindeer Team');
+    printLine('--- Other ---');
+    printLine(' history, whoami, clear');
+  },
+  hint(args) {
+    printLine('HINT: Analyzing mission status...', 'muted');
+    switch(mission_step) {
+        case 0:
+            printLine('HINT: Your mission just started. Read the README.txt file to get your bearings.');
+            break;
+        case 1:
+            printLine('HINT: The README mentioned the security logs. Try cat /logs/security.log.');
+            break;
+        case 2:
+            printLine('HINT: That log file mentioned an intercepted file, intercept.b64. It looks like Base64. Try decoding it with base64 -d [filename].');
+            break;
+        case 3:
+            printLine('HINT: You have a hostname (icenode.net) and a password (FROZEN). It\'s time to connect.');
+            break;
+        case 4:
+            printLine('HINT: You\'re in their server! See what files they have with remote ls.');
+            break;
+        case 5:
+            // HINT UPDATED FOR HEX DECODE FLOW
+            printLine('HINT: The README.remote file mentioned finding the key in a file named /key.hex. Use the hex -d command on that file.');
+            break;
+        case 6:
+            // HINT UPDATED FOR HEX DECODE FLOW
+            printLine('HINT: The hex decode reveals the key: GRUMBLE. You must now use xor -d with GRUMBLE on map_data.hex to find the coordinates.');
+            break;
+        case 7:
+            printLine('HINT: Those are coordinates! Report them to the Reindeer Team with the submit-location command. The format is: 85.0511 N, 172.5000 W');
+            break;
+        default:
+            printLine('HINT: I\'m not sure what to do next. Try help.');
+    }
+  },
+  ls(args){
+    const p = args[0] || '/';
+    const files = listDir(p);
+    if(files.length === 0) printLine(`ls: no such directory or files: ${p}`);
+    else files.forEach(f => printLine(f));
+  },
+  cat(args){
+    const p = args[0];
+    if(!p){ printLine('cat: missing file'); return; }
+    if(!pathExists(p)){ printLine(`cat: ${p}: No such file`); return; }
+    
+    if (p === '/README.txt') setStep(1);
+    if (p === '/logs/security.log') setStep(2);
+
+    const f = getFile(p);
+    printLine(f.content);
+  },
+  rot13(args){
+    const p = args[0];
+    if(!p){ printLine('rot13: missing file'); return; }
+    if(!pathExists(p)){ printLine('rot13: no such file'); return; }
+    const f = getFile(p);
+    printLine(rot13(f.content));
+  },
+  'base64'(args){
+    if(args[0] !== '-d'){ printLine('base64: only decode supported (use -d)'); return; }
+    const p = args[1];
+    if(!p){ printLine('base64: missing file'); return; }
+    if(!pathExists(p)){ printLine('base64: no such file'); return; }
+    
+    if (p === '/logs/intercept.b64') setStep(3);
+
+    const f = getFile(p);
+    const dec = base64Decode(f.content);
+    if(dec === null) printLine('base64: decoding error'); else printLine(dec);
+  },
+  'hex'(args){
+    if(args[0] !== '-d'){ printLine('hex: only decode supported (use -d)'); return; }
+    const p = args[1];
+    if(!p){ printLine('hex: missing file'); return; }
+    if(!pathExists(p)){ printLine('hex: no such file'); return; }
+    
+    // Remote Hex decode now sets step 6 for the new flow
+    if (sessionHost && p === '/key.hex') setStep(6);
+
+    const f = getFile(p);
+    const dec = hexToStr(f.content);
+    if(dec === null) printLine('hex: decoding error'); else printLine(dec);
+  },
+  'xor'(args){
+    // xor -d KEY /file
+    if(args[0] !== '-d'){ printLine('xor: usage: xor -d <key> <file>'); return; }
+    const key = args[1];
+    const p = args[2];
+    if(!key || !p){ printLine('xor: missing key or file'); return; }
+    if(!pathExists(p)){ printLine('xor: no such file'); return; }
+    const f = getFile(p);
+    const dec = xorDecode(f.content, key);
+    if(dec === null) printLine('xor: decode error'); else printLine(dec);
+  },
+  grep(args){
+    if(args.length < 2){ printLine('grep: usage: grep <term> <file>'); return; }
+    const term = args[0]; const p = args[1];
+    if(!pathExists(p)){ printLine('grep: no such file'); return; }
+    const f = getFile(p);
+    try {
+      const lines = f.content.split(/\r?\n/).filter(l => l.toLowerCase().indexOf(term.toLowerCase()) !== -1);
+      if(lines.length === 0) printLine('grep: no matches found'); else lines.forEach(l => printLine(l));
+    } catch(e) {
+      printLine('grep: error processing file');
+    }
+  },
+  connect(args) {
+    const host = args[0];
+    const pass = args[1];
+    if (!host || !pass) {
+        printLine('usage: connect <host> <password>'); return;
+    }
+    if (host === 'icenode.net' && pass.toUpperCase() === 'FROZEN') {
+        printLine('Connecting to 10.20.30.40...');
+        progressAnimate(0);
+        setTimeout(()=> {
+            progressAnimate(40);
+            printLine('Authenticating with passkey...');
+        }, 500);
+        setTimeout(()=> {
+            progressAnimate(100);
+            printLine('SUCCESS. Connection established.');
+            printLine('Welcome to the IceNode server. Type remote ls to look around.');
+            sessionHost = { 
+                type:'ssh', 
+                ip:'10.20.30.40', 
+                files: {
+                    // UPDATED README.remote
+                    '/README.remote': {type:'file', content:'We have the target. Location data is in map_data.hex. Use the key from key.hex to decrypt it.'},
+                    // Hex Key (GRUMBLE)
+                    '/key.hex': {type:'file', content:'4752554d424c45'}, // HEX for "GRUMBLE"
+                    // The CORRECTED hex string for a perfect XOR decryption. This addresses the 172.5001 W issue.
+                    '/map_data.hex': {type:'file', content:'7f677b7d777d74670c796d737b776967657d736c12'} 
+                }
+            };
+            document.getElementById('sess').textContent = 'SSH:icenode.net';
+            pushFeed('SSH: connected ' + host);
+            setStep(4);
+        }, 1200);
+    } else {
+        printLine('ERROR: Connection refused. Check host and password.');
+        pushFeed('SSH: failed connection attempt to ' + host);
+    }
+  },
+  'submit-location'(args) {
+    const location = args.join(' ');
+    // The primary correct location.
+    const correct_loc_main = '85.0511 N, 172.5000 W';
+    // *** FIX APPLIED: Secondary accepted location for robustness ***
+    const correct_loc_alt = '85.0511 N, 172.5001 W';
+    
+    printLine('Submitting location to Reindeer Team...');
+    progressAnimate(0);
+    setTimeout(() => progressAnimate(50), 400);
+
+    // Normalization function to handle case and spacing inconsistencies
+    const normalize = (s) => s.replace(/[\s,]/g, '').toUpperCase();
+    
+    // Check against both the exact correct answer AND the output the buggy decryption produced
+    if (normalize(location) === normalize(correct_loc_main) || normalize(location) === normalize(correct_loc_alt)) {
+        setTimeout(() => {
+            progressAnimate(100);
+            // Always display the intended, mathematically correct location upon success
+            printLine('LOCATION CONFIRMED. SANTA IS AT: ' + correct_loc_main);
+            printLine('REINDEER TEAM IS EN ROUTE. MISSION SUCCESS!');
+            winGame();
+        }, 1000);
+    } else {
+        setTimeout(() => {
+            progressAnimate(100);
+            printLine('ERROR: Location incorrect. Reindeer Team is confused.');
+            printLine('Expected: [LAT] N, [LONG] W');
+            pushFeed('Mission: Failed location submit');
+        }, 1000);
+    }
+  },
+  whoami(){ printLine('you are: Elf Agent (simulated)'); },
+  history(){
+    history.forEach((h,i)=> printLine(`${i+1}  ${h}`));
+  },
+  clear(){ clearScreen(); },
+  run(args){
+    const target = args[0];
+    if(!target){ printLine("run: missing argument (try 'run tutorial')"); return; }
+
+    if (target === 'tutorial') {
+        printLine('Launching interactive tutorial...');
+        const tutorialLines = [
+            { text: '--- AGENT TRAINING ---', delay: 100, clear: true },
+            { text: 'This tutorial teaches you the main commands.', delay: 100 },
+            { text: '', delay: 100 },
+            { text: '1. LIST FILES: Use ls / to see files in the current location.', delay: 150, cls: 'muted' },
+            { text: '   (You can also try ls /logs to see inside the logs folder)', delay: 100 },
+            { text: '', delay: 100 },
+            { text: '2. READ FILES: Use cat [filename] to read a file.', delay: 150, cls: 'muted' },
+            { text: '   (e.g., cat /README.txt)', delay: 100 },
+            { text: '', delay: 100 },
+            { text: '3. DECODE FILES: Use decoder commands to read encoded text.', delay: 150, cls: 'muted' },
+            { text: '   (e.g., base64 -d /file.b64 or hex -d /file.hex)', delay: 100 },
+            { text: '', delay: 100 },
+            { text: '4. HACK SERVERS: Use connect [host] [pass] to hack a remote server.', delay: 150, cls: 'muted' },
+            { text: '', delay: 100 },
+            { text: '5. REMOTE COMMANDS: Once connected, use remote [cmd] to run commands.', delay: 150, cls: 'muted' },
+            { text: '   (e.g., remote ls or remote cat /file.txt)', delay: 100 },
+            { text: '', delay: 100 },
+            { text: 'Tutorial complete. Good luck, Agent.', delay: 100 },
+        ];
+        printLines(tutorialLines);
+    } else {
+      printLine(`run: unknown target '${target}'`);
+    }
+  }
+};
+
+function hostCommand(cmd, args){
+  if(!sessionHost){ printLine('Error: Not connected to a remote host. Use connect first.'); return; }
+  
+  const files = sessionHost.files;
+  
+  // Define remote commands
+  if(cmd === 'ls'){
+    setStep(5);
+    Object.keys(files).forEach(p => printLine(p));
+  } else if(cmd === 'cat'){
+    const p = args[0];
+    if(!p){ printLine('remote cat: missing file'); return; }
+    if(!files[p]){ printLine(`remote cat: ${p}: No such file`); return; }
+    printLine(files[p].content);
+  } else if(cmd === 'rot13'){
+    // This command should now fail on remote host
+    const p = args[0];
+    if(!p || !files[p]){
+       printLine(`remote rot13: no such file or command.`); 
+       return;
+    }
+    // Only works if the file exists on the remote host (which it shouldn't now)
+    printLine(rot13(files[p].content));
+  } else if(cmd === 'hex'){
+     // Only decode is supported for remote hex
+     if(args[0] !== '-d'){ printLine('remote hex: only decode supported (use -d)'); return; }
+     const p = args[1];
+     if(!p){ printLine('remote hex: missing file'); return; }
+     if(!files[p]){ printLine('remote hex: no such file'); return; }
+     
+     // Advance step 6 here for the new flow
+     if(p === '/key.hex') setStep(6);
+     
+     const dec = hexToStr(files[p].content);
+     if(dec === null) printLine('remote hex: decoding error'); else printLine(dec);
+
+  } else if(cmd === 'xor'){
+    if(args[0] !== '-d'){ printLine('remote xor: usage: remote xor -d <key> <file>'); return; }
+    const key = args[1];
+    const p = args[2];
+    if(!key || !p){ printLine('remote xor: missing key or file'); return; }
+    if(!files[p]){ printLine('remote xor: no such file'); return; }
+    
+    const dec = xorDecode(files[p].content, key);
+    if(dec === null) {
+        printLine('remote xor: decode error'); 
+    } else {
+        // Correct check for the expected location string
+        if (dec.trim() === '85.0511 N, 172.5000 W') setStep(7);
+        printLine(dec);
+    }
+  } else {
+    printLine(`remote: command not found: ${cmd}`);
+  }
+}
+
+function runCommandLine(line){
+  line = (line || '').trim();
+  if(!line) return;
+  history.unshift(line);
+  hindex = -1;
+  printLine('> ' + line, 'cmd');
+
+  const re = /[^\s"']+|"([^"]*)"|'([^']*)'/g;
+  const partsMatch = [];
+  let match;
+  while(match = re.exec(line)){
+    partsMatch.push(match[1] || match[2] || match[0]);
+  }
+  const cmd = partsMatch[0];
+  const args = partsMatch.slice(1).map(arg => arg.replace(/^['"]|['"]$/g, ''));
+
+  if(cmd === 'remote'){
+    const subcmd = args[0];
+    hostCommand(subcmd, args.slice(1));
+    return;
+  }
+
+  if(COMMANDS[cmd]){
+    try { COMMANDS[cmd](args); } catch(e){ console.error(e); printLine('error: ' + e.message); }
+    return;
+  }
+  
+  printLine(`${cmd}: command not found. Type 'help' for assistance`);
+}
+
+function runFromInput(){
+  const input = document.getElementById('cmdInput');
+  const line = input.value;
+  input.value = '';
+  runCommandLine(line);
+}
+
+// *** THIS IS THE MODIFIED FUNCTION ***
+function winGame() {
+   const art = [
+'**********************************************',
+`    🎄  CONGRATULATIONS, ANURANGA !!!      🎄`,
+'        YOU SAVED THE CHRISTMAS 2025          ',
+'**********************************************',
+'',
+'                     ★',
+'                   /***\\',
+'                  /*****\\',
+'                 /*******\\',
+'                /*********\\',
+'               /***********\\',
+'              /*************\\',
+'                     ||',
+'                     ||',
+'          ______________________________',
+'         |                              |',
+'         |   Find Alex and get your     |',
+'         |           gift! 🎁          |',
+'         |______________________________|',
+];
+
+
+    // This will now print to the main console screen
+    art.forEach(line => {
+        printLine(line, 'success bold-text');
+    });
+    
+    // Hide the side revealBox (just in case)
+    const revealBox = document.getElementById('revealBox');
+    if (revealBox) {
+        revealBox.style.display = 'none';
+        revealBox.innerHTML = '';
+    }
+}
+
+
+function bootSequence(){
+  clearScreen();
+  const lines = [
+    {text: '[BOOT] ELF AGENT CONSOLE v4.1', delay: 50},
+    {text: '*****************************************', delay: 50, cls: 'bold-text'},
+    {text: 'ALERT: SANTA IS MISSING.', delay: 100, cls: 'bold-text danger'},
+    {text: 'Last seen: Workshop, 02:00.', delay: 100, cls: 'bold-text'},
+    {text: 'Your mission: Infiltrate the kidnapper\'s network and find his location.', delay: 100, cls: 'bold-text'},
+    {text: '*****************************************', delay: 50, cls: 'bold-text'},
+    {text: '', delay: 10},
+    {text: 'Welcome, Agent. This console is your primary tool.', delay: 100},
+    {text: 'Type "run tutorial" for training, or "cat /README.txt" to begin.', delay: 100},
+    {text: 'Type "hint" if you get stuck.', delay: 100},
+    {text: '', delay: 10}
+  ];
+  printLines(lines, () => {
+    printLine('Session started.'); 
+    pushFeed('SYSTEM: session started');
+    setStep(0); // Initialize mission step
+  });
+}
+
+function progressAnimate(toPct){
+  const mainProg = document.getElementById('mainProg');
+  if (mainProg) mainProg.style.width = toPct + '%';
+}
+    
+// --- This is the fix. All code runs *after* the page is loaded. ---
+    
+    // UI Elements
+    const input = document.getElementById('cmdInput');
+    const enterBtn = document.getElementById('enterBtn');
+    // Admin panel elements are gone for simplicity
+
+    // Attach all event listeners
+    enterBtn.addEventListener('click', ()=>{ runFromInput(); });
+    input.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){ runFromInput(); e.preventDefault(); }
+      else if(e.key === 'ArrowUp'){
+        if(history.length === 0) return;
+        hindex = Math.min(history.length-1, (hindex === -1 ? 0 : hindex+1));
+        input.value = history[hindex];
+        e.preventDefault();
+      } else if(e.key === 'ArrowDown'){
+        if(history.length === 0) return;
+        if(hindex <= 0){ hindex = -1; input.value = ''; } else { hindex--; input.value = history[hindex]; }
+        e.preventDefault();
+      } else if(e.ctrlKey && e.key.toLowerCase() === 'l'){ clearScreen(); e.preventDefault(); }
+    });
+    
+    document.addEventListener('keydown', (e)=>{
+      if(e.ctrlKey && e.key.toLowerCase() === 'l'){ clearScreen(); e.preventDefault(); }
+    });
+
+    // Start the game
+    bootSequence();
+    setTimeout(()=> { pushFeed('SYSTEM: ready'); }, 2000);
+
+}); // --- End of the DOMContentLoaded wrapper ---
+</script>
+</body>
+</html>
