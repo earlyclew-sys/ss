@@ -15,18 +15,16 @@ body {
   overflow: hidden;
 }
 
-/* Banner */
 .banner {
   position: absolute;
   top: 20px;
   width: 100%;
   text-align: center;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   letter-spacing: 1.5px;
   color: #e63946;
 }
 
-/* Countdown */
 .countdown {
   position: absolute;
   top: 60px;
@@ -36,7 +34,6 @@ body {
   font-weight: bold;
 }
 
-/* Credits */
 .credits-container {
   position: absolute;
   bottom: -20%;
@@ -110,31 +107,43 @@ body {
 </div>
 
 <script>
-/* Countdown set to exactly 13 hours */
-let remainingTime = 13 * 60 * 60;
+/* ===== TARGET TIME ===== */
+const STORAGE_KEY = "santaMissionTarget";
 
+// Get target time from localStorage or set new 13-hour countdown
+let targetTime = localStorage.getItem(STORAGE_KEY);
+if (targetTime) {
+  targetTime = new Date(parseInt(targetTime, 10));
+} else {
+  const now = new Date();
+  targetTime = new Date(now.getTime() + 13 * 60 * 60 * 1000); // 13 hours from now
+  localStorage.setItem(STORAGE_KEY, targetTime.getTime());
+}
+
+/* ===== COUNTDOWN FUNCTION ===== */
 function updateCountdown() {
-  if (remainingTime <= 0) {
+  const now = new Date().getTime();
+  const diff = targetTime - now;
+
+  if (diff <= 0) {
     document.getElementById("countdown").textContent = "MISSION STARTED";
     return;
   }
 
-  const hours = Math.floor(remainingTime / 3600);
-  const minutes = Math.floor((remainingTime % 3600) / 60);
-  const seconds = remainingTime % 60;
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
   document.getElementById("countdown").textContent =
     String(hours).padStart(2, "0") + " : " +
     String(minutes).padStart(2, "0") + " : " +
     String(seconds).padStart(2, "0");
-
-  remainingTime--;
 }
 
+/* ===== RUN INTERVAL ===== */
 updateCountdown();
 setInterval(updateCountdown, 1000);
 </script>
 
 </body>
 </html>
-    
