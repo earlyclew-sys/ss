@@ -63,7 +63,7 @@ body {
 </div>
 
 <div class="countdown" id="countdown">
-  13 : 00 : 00
+  00 : 00 : 00
 </div>
 
 <div class="credits-container">
@@ -107,22 +107,12 @@ body {
 </div>
 
 <script>
-/* ===== TARGET TIME ===== */
-const STORAGE_KEY = "santaMissionTarget";
+/* ===== FIXED UTC COUNTDOWN ===== */
+/* Example: start = tomorrow 12:00 PM Sri Lanka time (UTC+5:30) */
+const targetTime = new Date(Date.UTC(2025,11,17,6,30,0)); // 2025-12-18 12:00 SL time
 
-// Get target time from localStorage or set new 13-hour countdown
-let targetTime = localStorage.getItem(STORAGE_KEY);
-if (targetTime) {
-  targetTime = new Date(parseInt(targetTime, 10));
-} else {
-  const now = new Date();
-  targetTime = new Date(now.getTime() + 13 * 60 * 60 * 1000); // 13 hours from now
-  localStorage.setItem(STORAGE_KEY, targetTime.getTime());
-}
-
-/* ===== COUNTDOWN FUNCTION ===== */
 function updateCountdown() {
-  const now = new Date().getTime();
+  const now = new Date();
   const diff = targetTime - now;
 
   if (diff <= 0) {
@@ -140,7 +130,6 @@ function updateCountdown() {
     String(seconds).padStart(2, "0");
 }
 
-/* ===== RUN INTERVAL ===== */
 updateCountdown();
 setInterval(updateCountdown, 1000);
 </script>
